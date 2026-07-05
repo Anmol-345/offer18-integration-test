@@ -189,14 +189,17 @@
                     if (window.Offer18WebSDK) {
                         window.Offer18WebSDK.trackConversion({
                             domain: 'growstream634474.o18a.com',
-                            accountId: '29851', // Fixed: Changed from 765656 to your true network Account ID
+                            accountId: '29851',
                             offerId: '21982031',
-                            allowMultiConversion: true, // Allows you to keep running tests on the same session
+                            coupon: '',
+                            postbackType: 'iframe', // Explicitly declared for the client-side browser
+                            isGlobalPixel: false,
+                            allowMultiConversion: true, // Set to true so you can run multiple local test conversions
                             conversionData: {
-                                event: 'quest_complete'
+                                event: 'quest_complete' // Maps directly to your Quest Complete event token
                             }
                         });
-                        console.log("Conversion block evaluated with correct network account mapping.");
+                        console.log("Conversion block evaluated with official Web SDK parameters.");
                     }
                 }
             } catch (error) {
