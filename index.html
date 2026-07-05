@@ -189,14 +189,14 @@
                     if (window.Offer18WebSDK) {
                         window.Offer18WebSDK.trackConversion({
                             domain: 'growstream634474.o18a.com',
-                            accountId: '765656',
+                            accountId: '29851', // Fixed: Changed from 765656 to your true network Account ID
                             offerId: '21982031',
-                            allowMultiConversion: true, // Overrides the frontend cache filter
+                            allowMultiConversion: true, // Allows you to keep running tests on the same session
                             conversionData: {
-                                event: 'signup' // <-- Temporarily switch to your primary signup token
+                                event: 'quest_complete'
                             }
                         });
-                        console.log("Conversion block evaluated for signup milestone.");
+                        console.log("Conversion block evaluated with correct network account mapping.");
                     }
                 }
             } catch (error) {
