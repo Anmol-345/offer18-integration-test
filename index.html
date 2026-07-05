@@ -32,17 +32,16 @@
         }
     </style>
 
-    <!-- Offer18 Web SDK Core Module -->
-    <script src="https://web-resources.offer18.net/sdk/web/WebSDK.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            if (window.Offer18WebSDK) {
-                // Tracks the inbound tracking parameter from the redirect link
-                window.Offer18WebSDK.initializeUrlParam('aff_click_id');
+            // Grab the click ID straight from the URL query string
+            const urlParams = new URLSearchParams(window.location.search);
+            const clickId = urlParams.get('aff_click_id');
 
-                // Verbose Debug Logger active to track validation states
-                window.Offer18WebSDK.activateDebugMode();
-                console.log("Offer18 SDK initialized to map 'aff_click_id'.");
+            if (clickId) {
+                // Securely stash it so it persists even if the user refreshes
+                localStorage.setItem('saved_click_id', clickId);
+                console.log("Tracking ID safely stored: ", clickId);
             }
         });
     </script>
@@ -110,12 +109,10 @@
         const walletListContainer = document.getElementById('wallet-list');
         const loadingText = document.getElementById('loading-wallets');
 
-        // 1. Listen for EIP-6963 announcements (SubWallet, Phantom, MetaMask, etc.)
+        // Listen for EIP-6963 announcements
         window.addEventListener("eip6963:announceProvider", (event) => {
             const providerDetail = event.detail;
-
             if (supportedProviders.some(p => p.info.uuid === providerDetail.info.uuid)) return;
-
             supportedProviders.push(providerDetail);
             renderWalletButtons();
         });
@@ -139,7 +136,6 @@
         function renderWalletButtons() {
             loadingText.classList.add('hidden');
             walletListContainer.querySelectorAll('.wallet-btn').forEach(btn => btn.remove());
-
             supportedProviders.forEach(providerDetail => {
                 createWalletButton(providerDetail);
             });
@@ -161,7 +157,7 @@
             walletListContainer.appendChild(button);
         }
 
-        // 2. Core Connection Flow
+        // Core Connection Flow
         async function connectWalletInstance(providerDetail) {
             if (conversionFired) return;
 
@@ -186,20 +182,23 @@
                     document.getElementById('wallet-address').innerText = accounts[0];
                     document.getElementById('success-box').classList.remove('hidden');
 
-                    if (window.Offer18WebSDK) {
-                        window.Offer18WebSDK.trackConversion({
-                            domain: 'growstream634474.o18a.com',
-                            accountId: '29851',
-                            offerId: '21982031',
-                            coupon: '',
-                            postbackType: 'iframe', // Explicitly declared for the client-side browser
-                            isGlobalPixel: false,
-                            allowMultiConversion: true, // Set to true so you can run multiple local test conversions
-                            conversionData: {
-                                event: 'quest_complete' // Maps directly to your Quest Complete event token
-                            }
-                        });
-                        console.log("Conversion block evaluated with official Web SDK parameters.");
+                    // DISPATCH TO BACKEND API (Immune to Ad-blockers)
+                    const savedClickId = localStorage.getItem('saved_click_id');
+                    if (savedClickId) {
+                        console.log("Forwarding tracking conversion token to backend proxy...");
+                        try {
+                            const response = await fetch('/api/track-conversion', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({ clickId: savedClickId })
+                            });
+                            const result = await response.json();
+                            console.log("Server side conversion log response status: ", result);
+                        } catch (apiError) {
+                            console.error("Backend dispatch tracking fault: ", apiError);
+                        }
+                    } else {
+                        console.warn("Conversion skipped: No active aff_click_id token found in cache storage.");
                     }
                 }
             } catch (error) {
