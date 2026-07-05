@@ -57,7 +57,8 @@
             Verify Identity
         </h1>
 
-        <p class="text-zinc-500 font-light text-xs tracking-wider uppercase mb-8 max-w-xs mx-auto leading-relaxed">
+        <p id="quest-desc"
+            class="text-zinc-500 font-light text-xs tracking-wider uppercase mb-8 max-w-xs mx-auto leading-relaxed">
             Link an installed signature wallet below to route your data.
         </p>
 
@@ -76,10 +77,16 @@
             </p>
 
             <div id="wallet-address"
-                class="text-[10px] text-zinc-500 font-mono tracking-normal bg-zinc-900/30 border border-zinc-900/80 p-3 rounded-xl break-all">
+                class="text-[10px] text-zinc-500 font-mono tracking-normal bg-zinc-900/30 border border-zinc-900/80 p-3 rounded-xl break-all mb-6">
             </div>
 
-            <p class="text-[10px] text-zinc-600 font-light tracking-wide mt-4 italic">
+            <!-- Disconnect Wallet Button Trigger -->
+            <button onclick="disconnectWalletContext()"
+                class="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 font-medium tracking-widest text-[10px] uppercase py-3 px-6 rounded-full transition-all duration-300 border border-zinc-800 cursor-pointer mb-4">
+                Disconnect Wallet
+            </button>
+
+            <p class="text-[10px] text-zinc-600 font-light tracking-wide italic">
                 Data packet routed via proxy node.
             </p>
         </div>
@@ -102,7 +109,6 @@
         window.addEventListener("eip6963:announceProvider", (event) => {
             const providerDetail = event.detail;
 
-            // Avoid duplicate tracking rows
             if (supportedProviders.some(p => p.info.uuid === providerDetail.info.uuid)) return;
 
             supportedProviders.push(providerDetail);
@@ -141,13 +147,12 @@
             const button = document.createElement('button');
             button.className = "wallet-btn w-full bg-zinc-900/60 hover:bg-white hover:text-black text-zinc-300 font-medium tracking-widest text-xs uppercase py-3.5 px-6 rounded-full transition-all duration-300 transform active:scale-98 cursor-pointer border border-zinc-800 hover:border-white flex items-center justify-between";
 
-            // Assemble layout assets safely using standard text nodes
             button.innerHTML = `
                 <span class="flex items-center gap-3">
-                    <img src="${providerDetail.info.icon}" alt="${providerDetail.info.name}" class="w-5 h-5 rounded-md invert-0" onerror="this.style.display='none'">
+                    <img src="${providerDetail.info.icon}" alt="${providerDetail.info.name}" class="w-5 h-5 rounded-md" onerror="this.style.display='none'">
                     ${providerDetail.info.name}
                 </span>
-                <span class="text-[9px] text-zinc-600 tracking-normal group-hover:text-zinc-400">CONNECT &rarr;</span>
+                <span class="text-[9px] text-zinc-600 tracking-normal">CONNECT &rarr;</span>
             `;
 
             button.addEventListener('click', () => connectWalletInstance(providerDetail));
@@ -159,7 +164,6 @@
             if (conversionFired) return;
 
             try {
-                // Instantly request accounts from this specific provider
                 const accounts = await providerDetail.provider.request({ method: 'eth_requestAccounts' });
 
                 if (accounts && accounts.length > 0) {
@@ -167,6 +171,7 @@
 
                     // Display details
                     walletListContainer.classList.add('hidden');
+                    document.getElementById('quest-desc').classList.add('hidden');
                     document.getElementById('wallet-address').innerText = accounts[0];
                     document.getElementById('success-box').classList.remove('hidden');
 
@@ -185,6 +190,21 @@
                 console.error("Extension pairing fault:", error);
                 alert("Authorization protocol failed or rejected by your signer client.");
             }
+        }
+
+        // 5. Clear Local App Cache and Reset Layout State Completely
+        function disconnectWalletContext() {
+            conversionFired = false;
+
+            // Wipe string outputs out of safety memory mapping
+            document.getElementById('wallet-address').innerText = "";
+
+            // Toggle element frames gracefully back to selection list context
+            document.getElementById('success-box').classList.add('hidden');
+            walletListContainer.classList.remove('hidden');
+            document.getElementById('quest-desc').classList.remove('hidden');
+
+            console.log("Active UI session reset. Cache cleared.");
         }
     </script>
 </body>
