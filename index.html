@@ -1,106 +1,142 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Web3Quest - Connect Wallet</title>
-    
-    <!-- Tailwind CSS for Quick, Clean Styling -->
+    <title>The Quest</title>
+
+    <!-- Tailwind CSS for Layout Architecture -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+    <!-- Google Fonts: Playfair Display for headers & Reenie Beanie for a striking cursive accent -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Reenie+Beanie&family=Inter:wght@300;400&display=swap"
+        rel="stylesheet">
+
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+
+        .cursive-accent {
+            font-family: 'Reenie Beanie', cursive;
+            font-size: 3.5rem;
+            line-height: 1;
+        }
+
+        .serif-title {
+            font-family: 'Playfair Display', serif;
+        }
+    </style>
 
     <!-- 1. Include Offer18 Web SDK -->
     <script src="https://web-resources.offer18.net/sdk/web/WebSDK.js"></script>
     <script>
-        document.addEventListener("DOMContentLoaded", function() {
+        document.addEventListener("DOMContentLoaded", function () {
             if (window.Offer18WebSDK) {
-                // Automatically listens for '?clickid=XYZ' in your landing URL
                 window.Offer18WebSDK.initializeUrlParam('clickid');
-                console.log("Offer18 SDK initialized and listening for clickid.");
+                console.log("Offer18 SDK initialized.");
             }
         });
     </script>
 
-    <!-- 2. Include Ethers.js for Web3 Wallet Connections -->
+    <!-- 2. Include Ethers.js -->
     <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.1/dist/ethers.umd.min.js"></script>
 </head>
-<body class="bg-slate-900 text-white flex flex-col items-center justify-center min-h-screen p-4">
 
-    <!-- Main Content Card -->
-    <div class="max-w-md w-full bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-700 text-center">
-        <h1 class="text-3xl font-extrabold mb-2 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
-            Verify Your Wallet
+<body class="bg-black text-white flex flex-col items-center justify-center min-h-screen p-6 select-none">
+
+    <!-- Minimalist Content Card -->
+    <div class="max-w-md w-full border border-zinc-800 bg-zinc-950/40 rounded-3xl p-10 text-center backdrop-blur-sm">
+
+        <!-- Cursive Accent Header -->
+        <span class="cursive-accent block text-zinc-400 mb-1">the journey</span>
+
+        <!-- Serif Main Header -->
+        <h1 class="serif-title text-4xl font-light tracking-wide mb-3 uppercase text-zinc-100">
+            Verify Identity
         </h1>
-        <p class="text-slate-400 mb-8 text-sm">
-            Connect your Web3 wallet below to instantly complete your quest and verify your completion.
+
+        <p class="text-zinc-500 font-light text-xs tracking-wider uppercase mb-12 max-w-xs mx-auto leading-relaxed">
+            Link your signature wallet below to log verification details.
         </p>
 
-        <!-- Dynamic Wallet Button Layer -->
+        <!-- Dynamic Action Space -->
         <div id="wallet-actions">
-            <button id="connect-btn" onclick="connectWallet()" class="w-full bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-600 hover:to-emerald-600 text-white font-bold py-3 px-6 rounded-xl transition duration-200 transform active:scale-95 shadow-lg shadow-blue-500/20 cursor-pointer">
+            <button id="connect-btn" onclick="connectWallet()"
+                class="w-full bg-white hover:bg-zinc-200 text-black font-medium tracking-widest text-xs uppercase py-4 px-8 rounded-full transition-all duration-300 transform active:scale-98 cursor-pointer border border-transparent hover:border-zinc-400">
                 Connect Wallet
             </button>
         </div>
 
-        <!-- Success Message UI (Hidden by default) -->
-        <div id="success-box" class="hidden mt-6 p-4 bg-emerald-950/50 border border-emerald-500/30 rounded-xl">
-            <div class="text-emerald-400 font-semibold flex items-center justify-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                Wallet Verified Successfully!
-            </svg>
+        <!-- Minimal Success UI (Hidden by default) -->
+        <div id="success-box" class="hidden mt-4 pt-6 border-t border-zinc-900 transition-all duration-500">
+            <span class="cursive-accent block text-emerald-500 mb-2">completed</span>
+
+            <p class="text-zinc-400 text-xs font-light tracking-widest uppercase mb-4">
+                Session Active
+            </p>
+
+            <div id="wallet-address"
+                class="text-[10px] text-zinc-500 font-mono tracking-normal bg-zinc-900/30 border border-zinc-900/80 p-3 rounded-xl break-all">
             </div>
-            <p id="wallet-address" class="text-xs text-slate-400 mt-2 font-mono break-all bg-slate-900/60 p-2 rounded"></p>
-            <p class="text-xs text-slate-500 mt-2">Conversion pixel sent to tracking network.</p>
+
+            <p class="text-[10px] text-zinc-600 font-light tracking-wide mt-4 italic">
+                Data packet routed via proxy node.
+            </p>
         </div>
     </div>
 
-    <!-- Web3 & Offer18 Tracking Script Logic -->
+    <!-- Footnote Component -->
+    <p class="text-[10px] text-zinc-700 tracking-widest uppercase mt-8 absolute bottom-6 serif-title">
+        Web3Cash Integration Layer
+    </p>
+
+    <!-- Core Connection & Routing Logic -->
     <script>
         async function connectWallet() {
             const connectBtn = document.getElementById('connect-btn');
-            
-            // Check if a Web3 Provider (like MetaMask) is injected in the browser
+
             if (typeof window.ethereum === 'undefined') {
-                alert('No Web3 wallet detected! Please install MetaMask or use a Web3 compatible browser.');
+                alert('No Web3 wallet interface found. Please launch via a Web3 companion dashboard or extension.');
                 return;
             }
 
             try {
-                connectBtn.innerText = "Connecting...";
+                connectBtn.innerText = "SYNCHRONIZING...";
                 connectBtn.disabled = true;
 
-                // 1. Trigger the wallet authorization request via Ethers.js
                 const provider = new ethers.BrowserProvider(window.ethereum);
                 const signer = await provider.getSigner();
                 const walletAddress = await signer.getAddress();
 
-                // 2. Modify UI to reflect successful connection state
+                // UI Lifecycle updates
                 document.getElementById('wallet-actions').classList.add('hidden');
                 document.getElementById('wallet-address').innerText = walletAddress;
                 document.getElementById('success-box').classList.remove('hidden');
 
-                // 3. Fire the conversion track to Offer18 immediately
+                // Fire Offer18 Track Configuration
                 if (window.Offer18WebSDK) {
                     window.Offer18WebSDK.trackConversion({
-                        domain: 'web3cash.o18.link',     // Keep or modify with your tracking domain
-                        accountId: 'YOUR_ACCOUNT_ID',    // Replace with your actual Offer18 Account ID
-                        offerId: 'YOUR_OFFER_ID'         // Replace with your actual Offer18 Offer ID
+                        domain: 'web3cash.o18.link',
+                        accountId: 'YOUR_ACCOUNT_ID',    // <-- Insert Offer18 Account ID
+                        offerId: 'YOUR_OFFER_ID'         // <-- Insert Offer18 Offer ID
                     });
-                    console.log("Offer18 conversion dispatched for address: " + walletAddress);
-                } else {
-                    console.error("Offer18 SDK was not loaded properly at runtime.");
+                    console.log("Transmission initialized targeting proxy system node.");
                 }
 
             } catch (error) {
-                console.error("Wallet connection failed:", error);
-                alert("Connection rejected or failed. Please try again.");
-                
-                // Reset button state on failure
-                connectBtn.innerText = "Connect Wallet";
+                console.error("Linkage fault:", error);
+                alert("Authorization protocol failed or rejected by local signer client.");
+
+                connectBtn.innerText = "CONNECT WALLET";
                 connectBtn.disabled = false;
             }
         }
     </script>
 </body>
+
 </html>
