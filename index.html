@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Web3Quest - Connect Wallet</title>
+    
+    <!-- Tailwind CSS for Quick, Clean Styling -->
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+
+    <!-- 1. Include Offer18 Web SDK -->
+    <script src="https://web-resources.offer18.net/sdk/web/WebSDK.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function() {
+            if (window.Offer18WebSDK) {
+                // Automatically listens for '?clickid=XYZ' in your landing URL
+                window.Offer18WebSDK.initializeUrlParam('clickid');
+                console.log("Offer18 SDK initialized and listening for clickid.");
+            }
+        });
+    </script>
+
+    <!-- 2. Include Ethers.js for Web3 Wallet Connections -->
+    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.1/dist/ethers.umd.min.js"></script>
+</head>
+<body class="bg-slate-900 text-white flex flex-col items-center justify-center min-h-screen p-4">
+
+    <!-- Main Content Card -->
+    <div class="max-w-md w-full bg-slate-800 rounded-2xl shadow-xl p-8 border border-slate-700 text-center">
+        <h1 class="text-3xl font-extrabold mb-2 tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-blue-400 to-emerald-400">
+            Verify Your Wallet
+        </h1>
+        <p class="text-slate-400 mb-8 text-sm">
+            Connect your Web3 wallet below to instantly complete your quest and verify your completion.
+        </p>
+
+        <!-- Dynamic Wallet Button Layer -->
+        <div id="wallet-actions">
+            <button id="connect-btn" onclick="connectWallet()" class="w-full bg-gradient-to-r from-blue-500 to-emerald-500 hover:from-blue-600 hover:to-emerald-600 text-white font-bold py-3 px-6 rounded-xl transition duration-200 transform active:scale-95 shadow-lg shadow-blue-500/20 cursor-pointer">
+                Connect Wallet
+            </button>
+        </div>
+
+        <!-- Success Message UI (Hidden by default) -->
+        <div id="success-box" class="hidden mt-6 p-4 bg-emerald-950/50 border border-emerald-500/30 rounded-xl">
+            <div class="text-emerald-400 font-semibold flex items-center justify-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                Wallet Verified Successfully!
+            </svg>
+            </div>
+            <p id="wallet-address" class="text-xs text-slate-400 mt-2 font-mono break-all bg-slate-900/60 p-2 rounded"></p>
+            <p class="text-xs text-slate-500 mt-2">Conversion pixel sent to tracking network.</p>
+        </div>
+    </div>
+
+    <!-- Web3 & Offer18 Tracking Script Logic -->
+    <script>
+        async function connectWallet() {
+            const connectBtn = document.getElementById('connect-btn');
+            
+            // Check if a Web3 Provider (like MetaMask) is injected in the browser
+            if (typeof window.ethereum === 'undefined') {
+                alert('No Web3 wallet detected! Please install MetaMask or use a Web3 compatible browser.');
+                return;
+            }
+
+            try {
+                connectBtn.innerText = "Connecting...";
+                connectBtn.disabled = true;
+
+                // 1. Trigger the wallet authorization request via Ethers.js
+                const provider = new ethers.BrowserProvider(window.ethereum);
+                const signer = await provider.getSigner();
+                const walletAddress = await signer.getAddress();
+
+                // 2. Modify UI to reflect successful connection state
+                document.getElementById('wallet-actions').classList.add('hidden');
+                document.getElementById('wallet-address').innerText = walletAddress;
+                document.getElementById('success-box').classList.remove('hidden');
+
+                // 3. Fire the conversion track to Offer18 immediately
+                if (window.Offer18WebSDK) {
+                    window.Offer18WebSDK.trackConversion({
+                        domain: 'web3cash.o18.link',     // Keep or modify with your tracking domain
+                        accountId: 'YOUR_ACCOUNT_ID',    // Replace with your actual Offer18 Account ID
+                        offerId: 'YOUR_OFFER_ID'         // Replace with your actual Offer18 Offer ID
+                    });
+                    console.log("Offer18 conversion dispatched for address: " + walletAddress);
+                } else {
+                    console.error("Offer18 SDK was not loaded properly at runtime.");
+                }
+
+            } catch (error) {
+                console.error("Wallet connection failed:", error);
+                alert("Connection rejected or failed. Please try again.");
+                
+                // Reset button state on failure
+                connectBtn.innerText = "Connect Wallet";
+                connectBtn.disabled = false;
+            }
+        }
+    </script>
+</body>
+</html>
