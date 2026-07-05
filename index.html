@@ -101,6 +101,7 @@
     <script>
         const supportedProviders = [];
         let conversionFired = false;
+        let activeProvider = null; // Tracks which wallet is currently running the session
 
         const walletListContainer = document.getElementById('wallet-list');
         const loadingText = document.getElementById('loading-wallets');
@@ -148,12 +149,12 @@
             button.className = "wallet-btn w-full bg-zinc-900/60 hover:bg-white hover:text-black text-zinc-300 font-medium tracking-widest text-xs uppercase py-3.5 px-6 rounded-full transition-all duration-300 transform active:scale-98 cursor-pointer border border-zinc-800 hover:border-white flex items-center justify-between";
 
             button.innerHTML = `
-                <span class="flex items-center gap-3">
-                    <img src="${providerDetail.info.icon}" alt="${providerDetail.info.name}" class="w-5 h-5 rounded-md" onerror="this.style.display='none'">
-                    ${providerDetail.info.name}
-                </span>
-                <span class="text-[9px] text-zinc-600 tracking-normal">CONNECT &rarr;</span>
-            `;
+            <span class="flex items-center gap-3">
+                <img src="${providerDetail.info.icon}" alt="${providerDetail.info.name}" class="w-5 h-5 rounded-md" onerror="this.style.display='none'">
+                ${providerDetail.info.name}
+            </span>
+            <span class="text-[9px] text-zinc-600 tracking-normal">CONNECT &rarr;</span>
+        `;
 
             button.addEventListener('click', () => connectWalletInstance(providerDetail));
             walletListContainer.appendChild(button);
@@ -168,6 +169,7 @@
 
                 if (accounts && accounts.length > 0) {
                     conversionFired = true;
+                    activeProvider = providerDetail.provider; // Save the reference to revoke permissions later
 
                     // Display details
                     walletListContainer.classList.add('hidden');
@@ -192,11 +194,25 @@
             }
         }
 
-        // 5. Clear Local App Cache and Reset Layout State Completely
-        function disconnectWalletContext() {
-            conversionFired = false;
+        // 5. Force the active extension to revoke permissions, clearing its session cache
+        async function disconnectWalletContext() {
+            if (activeProvider) {
+                try {
+                    // This breaks the extension's internal connection cache, forcing a pop-up prompt on the next connect click
+                    await activeProvider.request({
+                        method: "wallet_revokePermissions",
+                        params: [{ eth_accounts: {} }]
+                    });
+                    console.log("Extension permissions revoked successfully.");
+                } catch (err) {
+                    // Fallback for wallets that don't fully support automated revokes yet
+                    console.warn("Wallet declined automated permission revocation. Clearing local states anyway.", err);
+                }
+            }
 
-            // Wipe string outputs out of safety memory mapping
+            // Wipe local runtime configuration states
+            conversionFired = false;
+            activeProvider = null;
             document.getElementById('wallet-address').innerText = "";
 
             // Toggle element frames gracefully back to selection list context
