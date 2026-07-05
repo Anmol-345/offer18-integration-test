@@ -187,13 +187,15 @@
                     document.getElementById('wallet-address').innerText = accounts[0];
                     document.getElementById('success-box').classList.remove('hidden');
 
-                    // 3. Dispatch to Offer18 tracking system
+                    // 3. Dispatch to Offer18 tracking system using the correct object layout schema
                     if (window.Offer18WebSDK) {
                         window.Offer18WebSDK.trackConversion({
                             domain: 'growstream634474.o18a.com',
                             accountId: '765656',
                             offerId: '21982031',
-                            goalToken: 'quest_complete'
+                            conversionData: {
+                                event: 'quest_complete'
+                            }
                         });
                         console.log("Conversion transaction successfully logged.");
                     }
