@@ -37,8 +37,12 @@
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             if (window.Offer18WebSDK) {
+                // Tracks the inbound tracking parameter
                 window.Offer18WebSDK.initializeUrlParam('clickid');
-                console.log("Offer18 SDK initialized.");
+
+                // FORCE DEBUG LOGGER: Spits out explicit network transaction statuses to the console logs
+                window.Offer18WebSDK.activateDebugMode();
+                console.log("Offer18 SDK initialized with Verbose Debug Monitoring Active.");
             }
         });
     </script>
@@ -187,17 +191,17 @@
                     document.getElementById('wallet-address').innerText = accounts[0];
                     document.getElementById('success-box').classList.remove('hidden');
 
-                    // 3. Dispatch to Offer18 tracking system using the correct object layout schema
+                    // 3. Dispatch to Offer18 tracking system using the validated object layout layout
                     if (window.Offer18WebSDK) {
                         window.Offer18WebSDK.trackConversion({
                             domain: 'growstream634474.o18a.com',
                             accountId: '765656',
                             offerId: '21982031',
                             conversionData: {
-                                event: 'quest_complete'
+                                event: 'quest_complete' // Correct parameter format maps cleanly to your goal setup
                             }
                         });
-                        console.log("Conversion transaction successfully logged.");
+                        console.log("Conversion transaction dispatched. Look for Offer18 network validation logs below.");
                     }
                 }
             } catch (error) {
