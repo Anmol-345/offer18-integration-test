@@ -9,11 +9,11 @@
     <!-- Tailwind CSS for Layout Architecture -->
     <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
 
-    <!-- Google Fonts: Playfair Display for headers & Reenie Beanie for a striking cursive accent -->
+    <!-- Google Fonts: Playfair Display & Reenie Beanie -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link
-        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Reenie+Beanie&family=Inter:wght@300;400&display=swap"
+        href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,400..900;1,400..900&family=Reenie+Beanie&family=Inter:wght=300;400&display=swap"
         rel="stylesheet">
 
     <style>
@@ -32,7 +32,7 @@
         }
     </style>
 
-    <!-- 1. Include Offer18 Web SDK -->
+    <!-- Offer18 Web SDK Core Module -->
     <script src="https://web-resources.offer18.net/sdk/web/WebSDK.js"></script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
@@ -42,9 +42,6 @@
             }
         });
     </script>
-
-    <!-- 2. Include Ethers.js -->
-    <script src="https://cdn.jsdelivr.net/npm/ethers@6.13.1/dist/ethers.umd.min.js"></script>
 </head>
 
 <body class="bg-black text-white flex flex-col items-center justify-center min-h-screen p-6 select-none">
@@ -60,24 +57,22 @@
             Verify Identity
         </h1>
 
-        <p class="text-zinc-500 font-light text-xs tracking-wider uppercase mb-12 max-w-xs mx-auto leading-relaxed">
-            Link your signature wallet below to log verification details.
+        <p class="text-zinc-500 font-light text-xs tracking-wider uppercase mb-8 max-w-xs mx-auto leading-relaxed">
+            Link an installed signature wallet below to route your data.
         </p>
 
-        <!-- Dynamic Action Space -->
-        <div id="wallet-actions">
-            <button id="connect-btn" onclick="connectWallet()"
-                class="w-full bg-white hover:bg-zinc-200 text-black font-medium tracking-widest text-xs uppercase py-4 px-8 rounded-full transition-all duration-300 transform active:scale-98 cursor-pointer border border-transparent hover:border-zinc-400">
-                Connect Wallet
-            </button>
+        <!-- Dynamic EIP-6963 Wallet Injection List -->
+        <div id="wallet-list" class="flex flex-col gap-3 w-full">
+            <p id="loading-wallets" class="text-zinc-600 text-xs tracking-widest uppercase py-4">Scanning extensions...
+            </p>
         </div>
 
         <!-- Minimal Success UI (Hidden by default) -->
-        <div id="success-box" class="hidden mt-4 pt-6 border-t border-zinc-900 transition-all duration-500">
+        <div id="success-box" class="hidden mt-4 pt-6 border-t border-zinc-900 transition-all duration-500 w-full">
             <span class="cursive-accent block text-emerald-500 mb-2">completed</span>
 
             <p class="text-zinc-400 text-xs font-light tracking-widest uppercase mb-4">
-                Session Active
+                Identity Mapped
             </p>
 
             <div id="wallet-address"
@@ -95,47 +90,100 @@
         Web3Cash Integration Layer
     </p>
 
-    <!-- Core Connection & Routing Logic -->
+    <!-- Pure Native EIP-6963 Interceptor Logic -->
     <script>
-        async function connectWallet() {
-            const connectBtn = document.getElementById('connect-btn');
+        const supportedProviders = [];
+        let conversionFired = false;
 
-            if (typeof window.ethereum === 'undefined') {
-                alert('No Web3 wallet interface found. Please launch via a Web3 companion dashboard or extension.');
-                return;
+        const walletListContainer = document.getElementById('wallet-list');
+        const loadingText = document.getElementById('loading-wallets');
+
+        // 1. Listen for standard EIP-6963 announcements from extensions (SubWallet, Phantom, MetaMask, etc.)
+        window.addEventListener("eip6963:announceProvider", (event) => {
+            const providerDetail = event.detail;
+
+            // Avoid duplicate tracking rows
+            if (supportedProviders.some(p => p.info.uuid === providerDetail.info.uuid)) return;
+
+            supportedProviders.push(providerDetail);
+            renderWalletButtons();
+        });
+
+        // 2. Fire the global event tracking discovery probe
+        window.dispatchEvent(new Event("eip6963:requestProvider"));
+
+        // Fallback: If no EIP-6963 announcements clear within 1 second, look for standard window.ethereum
+        setTimeout(() => {
+            if (supportedProviders.length === 0) {
+                if (window.ethereum) {
+                    loadingText.classList.add('hidden');
+                    createWalletButton({
+                        info: { name: 'Injected Wallet', icon: 'https://placeholder.co/32' },
+                        provider: window.ethereum
+                    });
+                } else {
+                    loadingText.innerText = "NO EXTENSIONS DETECTED";
+                }
             }
+        }, 1000);
+
+        // Render discovered provider items into our minimal interface design
+        function renderWalletButtons() {
+            loadingText.classList.add('hidden');
+            walletListContainer.querySelectorAll('.wallet-btn').forEach(btn => btn.remove());
+
+            supportedProviders.forEach(providerDetail => {
+                createWalletButton(providerDetail);
+            });
+        }
+
+        function createWalletButton(providerDetail) {
+            const button = document.createElement('button');
+            button.className = "wallet-btn w-full bg-zinc-900/60 hover:bg-white hover:text-black text-zinc-300 font-medium tracking-widest text-xs uppercase py-3.5 px-6 rounded-full transition-all duration-300 transform active:scale-98 cursor-pointer border border-zinc-800 hover:border-white flex items-center justify-between";
+
+            // Assemble layout assets safely using standard text nodes
+            button.innerHTML = `
+                <span class="flex items-center gap-3">
+                    <img src="${providerDetail.info.icon}" alt="${providerDetail.info.name}" class="w-5 h-5 rounded-md invert-0" onerror="this.style.display='none'">
+                    ${providerDetail.info.name}
+                </span>
+                <span class="text-[9px] text-zinc-600 tracking-normal group-hover:text-zinc-400">CONNECT &rarr;</span>
+            `;
+
+            button.addEventListener('click', () => connectWalletInstance(providerDetail));
+            walletListContainer.appendChild(button);
+        }
+
+        // 3. Request account routing on the chosen native wallet instance
+        async function connectWalletInstance(providerDetail) {
+            if (conversionFired) return;
 
             try {
-                connectBtn.innerText = "SYNCHRONIZING...";
-                connectBtn.disabled = true;
+                // Instantly request accounts from this specific provider
+                const accounts = await providerDetail.provider.request({ method: 'eth_requestAccounts' });
 
-                const provider = new ethers.BrowserProvider(window.ethereum);
-                const signer = await provider.getSigner();
-                const walletAddress = await signer.getAddress();
+                if (accounts && accounts.length > 0) {
+                    conversionFired = true;
 
-                // UI Lifecycle updates
-                document.getElementById('wallet-actions').classList.add('hidden');
-                document.getElementById('wallet-address').innerText = walletAddress;
-                document.getElementById('success-box').classList.remove('hidden');
+                    // Display details
+                    walletListContainer.classList.add('hidden');
+                    document.getElementById('wallet-address').innerText = accounts[0];
+                    document.getElementById('success-box').classList.remove('hidden');
 
-                // Fire Offer18 Track Configuration
-                // Change this section in your HTML file:
-                if (window.Offer18WebSDK) {
-                    window.Offer18WebSDK.trackConversion({
-                        domain: 'growstream634474.o18a.com', // 1. Update to your actual tracking domain
-                        accountId: '765656',                 // 2. Update to your Affiliate ID
-                        offerId: '21982031',                 // 3. Update to your Offer ID
-                        goalToken: 'quest_complete'          // 4. Matches your Offer18 goal name
-                    });
-                    console.log("Transmission initialized targeting proxy system node.");
+                    // 4. Dispatch straight to your active Offer18 campaign metrics
+                    if (window.Offer18WebSDK) {
+                        window.Offer18WebSDK.trackConversion({
+                            domain: 'growstream634474.o18a.com',
+                            accountId: '765656',
+                            offerId: '21982031',
+                            goalToken: 'quest_complete'
+                        });
+                        console.log("Conversion transaction successfully broadcasted.");
+                    }
                 }
-
             } catch (error) {
-                console.error("Linkage fault:", error);
-                alert("Authorization protocol failed or rejected by local signer client.");
-
-                connectBtn.innerText = "CONNECT WALLET";
-                connectBtn.disabled = false;
+                console.error("Extension pairing fault:", error);
+                alert("Authorization protocol failed or rejected by your signer client.");
             }
         }
     </script>
