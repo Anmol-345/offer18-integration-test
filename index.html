@@ -119,11 +119,13 @@
                 document.getElementById('success-box').classList.remove('hidden');
 
                 // Fire Offer18 Track Configuration
+                // Change this section in your HTML file:
                 if (window.Offer18WebSDK) {
                     window.Offer18WebSDK.trackConversion({
-                        domain: 'web3cash.o18.link',
-                        accountId: 'YOUR_ACCOUNT_ID',    // <-- Insert Offer18 Account ID
-                        offerId: 'YOUR_OFFER_ID'         // <-- Insert Offer18 Offer ID
+                        domain: 'growstream634474.o18a.com', // 1. Update to your actual tracking domain
+                        accountId: '765656',                 // 2. Update to your Affiliate ID
+                        offerId: '21982031',                 // 3. Update to your Offer ID
+                        goalToken: 'quest_complete'          // 4. Matches your Offer18 goal name
                     });
                     console.log("Transmission initialized targeting proxy system node.");
                 }
