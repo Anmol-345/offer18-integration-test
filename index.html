@@ -186,18 +186,17 @@
                     document.getElementById('wallet-address').innerText = accounts[0];
                     document.getElementById('success-box').classList.remove('hidden');
 
-                    // 3. FIXED: Dispatch conversion directly utilizing the top-level goalToken property
                     if (window.Offer18WebSDK) {
                         window.Offer18WebSDK.trackConversion({
                             domain: 'growstream634474.o18a.com',
                             accountId: '765656',
                             offerId: '21982031',
-                            allowMultiConversion: true, // <-- FORCE THE WEB SDK TO ALLOW DUPLICATE TEST PASSES
+                            allowMultiConversion: true, // Overrides the frontend cache filter
                             conversionData: {
-                                event: 'quest_complete'
+                                event: 'signup' // <-- Temporarily switch to your primary signup token
                             }
                         });
-                        console.log("Conversion block evaluated.");
+                        console.log("Conversion block evaluated for signup milestone.");
                     }
                 }
             } catch (error) {
