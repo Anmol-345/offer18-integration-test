@@ -80,7 +80,7 @@
                 class="text-[10px] text-zinc-500 font-mono tracking-normal bg-zinc-900/30 border border-zinc-900/80 p-3 rounded-xl break-all mb-6">
             </div>
 
-            <!-- Disconnect Wallet Button Trigger -->
+            <!-- Disconnect Trigger Button -->
             <button onclick="disconnectWalletContext()"
                 class="w-full bg-zinc-900 hover:bg-zinc-800 text-zinc-400 hover:text-zinc-200 font-medium tracking-widest text-[10px] uppercase py-3 px-6 rounded-full transition-all duration-300 border border-zinc-800 cursor-pointer mb-4">
                 Disconnect Wallet
@@ -97,16 +97,16 @@
         Web3Cash Integration Layer
     </p>
 
-    <!-- Pure Native EIP-6963 Interceptor Logic -->
+    <!-- Pure Native Multi-Wallet Discovery & Account Requesting Script -->
     <script>
         const supportedProviders = [];
         let conversionFired = false;
-        let activeProvider = null; // Tracks which wallet is currently running the session
+        let lastConnectedUuid = null;
 
         const walletListContainer = document.getElementById('wallet-list');
         const loadingText = document.getElementById('loading-wallets');
 
-        // 1. Listen for standard EIP-6963 announcements from extensions (SubWallet, Phantom, MetaMask, etc.)
+        // 1. Listen for EIP-6963 announcements (SubWallet, Phantom, MetaMask, etc.)
         window.addEventListener("eip6963:announceProvider", (event) => {
             const providerDetail = event.detail;
 
@@ -116,16 +116,16 @@
             renderWalletButtons();
         });
 
-        // 2. Fire the global event tracking discovery probe
+        // Request extensions to announce themselves
         window.dispatchEvent(new Event("eip6963:requestProvider"));
 
-        // Fallback: If no EIP-6963 announcements clear within 1 second, look for standard window.ethereum
+        // Fallback for generic window.ethereum if no announcements occur within 1s
         setTimeout(() => {
             if (supportedProviders.length === 0) {
                 if (window.ethereum) {
                     loadingText.classList.add('hidden');
                     createWalletButton({
-                        info: { name: 'Injected Wallet', icon: 'https://placeholder.co/32' },
+                        info: { name: 'Injected Wallet', icon: 'https://placeholder.co/32', uuid: 'injected-fallback' },
                         provider: window.ethereum
                     });
                 } else {
@@ -134,7 +134,6 @@
             }
         }, 1000);
 
-        // Render discovered provider items into our minimal interface design
         function renderWalletButtons() {
             loadingText.classList.add('hidden');
             walletListContainer.querySelectorAll('.wallet-btn').forEach(btn => btn.remove());
@@ -149,35 +148,46 @@
             button.className = "wallet-btn w-full bg-zinc-900/60 hover:bg-white hover:text-black text-zinc-300 font-medium tracking-widest text-xs uppercase py-3.5 px-6 rounded-full transition-all duration-300 transform active:scale-98 cursor-pointer border border-zinc-800 hover:border-white flex items-center justify-between";
 
             button.innerHTML = `
-            <span class="flex items-center gap-3">
-                <img src="${providerDetail.info.icon}" alt="${providerDetail.info.name}" class="w-5 h-5 rounded-md" onerror="this.style.display='none'">
-                ${providerDetail.info.name}
-            </span>
-            <span class="text-[9px] text-zinc-600 tracking-normal">CONNECT &rarr;</span>
-        `;
+                <span class="flex items-center gap-3">
+                    <img src="${providerDetail.info.icon}" alt="${providerDetail.info.name}" class="w-5 h-5 rounded-md" onerror="this.style.display='none'">
+                    ${providerDetail.info.name}
+                </span>
+                <span class="text-[9px] text-zinc-600 tracking-normal">CONNECT &rarr;</span>
+            `;
 
             button.addEventListener('click', () => connectWalletInstance(providerDetail));
             walletListContainer.appendChild(button);
         }
 
-        // 3. Request account routing on the chosen native wallet instance
+        // 2. Core Connection Flow
         async function connectWalletInstance(providerDetail) {
             if (conversionFired) return;
 
             try {
+                // FORCE ACCOUNT PICKER: Requesting clean permissions bypasses cache and forces the wallet popup
+                try {
+                    await providerDetail.provider.request({
+                        method: 'wallet_requestPermissions',
+                        params: [{ eth_accounts: {} }]
+                    });
+                } catch (permissionError) {
+                    console.warn("Wallet or browser blocked permission window request, trying standard fallback...", permissionError);
+                }
+
+                // Fetch the explicitly picked account
                 const accounts = await providerDetail.provider.request({ method: 'eth_requestAccounts' });
 
                 if (accounts && accounts.length > 0) {
                     conversionFired = true;
-                    activeProvider = providerDetail.provider; // Save the reference to revoke permissions later
+                    lastConnectedUuid = providerDetail.info.uuid;
 
-                    // Display details
+                    // Toggle Display frames
                     walletListContainer.classList.add('hidden');
                     document.getElementById('quest-desc').classList.add('hidden');
                     document.getElementById('wallet-address').innerText = accounts[0];
                     document.getElementById('success-box').classList.remove('hidden');
 
-                    // 4. Dispatch straight to your active Offer18 campaign metrics
+                    // 3. Dispatch to Offer18 tracking system
                     if (window.Offer18WebSDK) {
                         window.Offer18WebSDK.trackConversion({
                             domain: 'growstream634474.o18a.com',
@@ -185,42 +195,26 @@
                             offerId: '21982031',
                             goalToken: 'quest_complete'
                         });
-                        console.log("Conversion transaction successfully broadcasted.");
+                        console.log("Conversion transaction successfully logged.");
                     }
                 }
             } catch (error) {
                 console.error("Extension pairing fault:", error);
-                alert("Authorization protocol failed or rejected by your signer client.");
+                alert("Authorization cancelled or rejected by client.");
             }
         }
 
-        // 5. Force the active extension to revoke permissions, clearing its session cache
-        async function disconnectWalletContext() {
-            if (activeProvider) {
-                try {
-                    // This breaks the extension's internal connection cache, forcing a pop-up prompt on the next connect click
-                    await activeProvider.request({
-                        method: "wallet_revokePermissions",
-                        params: [{ eth_accounts: {} }]
-                    });
-                    console.log("Extension permissions revoked successfully.");
-                } catch (err) {
-                    // Fallback for wallets that don't fully support automated revokes yet
-                    console.warn("Wallet declined automated permission revocation. Clearing local states anyway.", err);
-                }
-            }
-
-            // Wipe local runtime configuration states
+        // 4. Safe UI Disconnect context
+        function disconnectWalletContext() {
             conversionFired = false;
-            activeProvider = null;
-            document.getElementById('wallet-address').innerText = "";
 
-            // Toggle element frames gracefully back to selection list context
+            // Clean interface properties
+            document.getElementById('wallet-address').innerText = "";
             document.getElementById('success-box').classList.add('hidden');
             walletListContainer.classList.remove('hidden');
             document.getElementById('quest-desc').classList.remove('hidden');
 
-            console.log("Active UI session reset. Cache cleared.");
+            console.log("Local UI connection cleared. The next click will prompt account choice.");
         }
     </script>
 </body>
